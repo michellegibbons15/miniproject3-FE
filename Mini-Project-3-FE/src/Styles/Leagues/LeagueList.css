@@ -1,0 +1,47 @@
+.league-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.74);
+  flex-wrap: wrap;
+  padding: 30px;
+  margin: 0 auto;
+  width: 60vw;
+  height: 80vh;
+}
+
+/* Header styling */
+.league-container h1 {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+/* League list container */
+.league-lists {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* 2 columns */
+  gap: 20px; /* Space between items */
+  width: 100%;
+  max-width: 800px; /* Set max-width if desired */
+}
+
+/* Individual league items */
+.league-item {
+  background-color: #f0f0f0;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* League list styling */
+.league-item ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.league-item li {
+  margin-bottom: 10px;
+}
