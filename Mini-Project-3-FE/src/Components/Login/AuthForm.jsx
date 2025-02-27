@@ -1,12 +1,31 @@
-import React, {useState} from 'react'
+import React, {useState, useEffect} from 'react'
 import "../../Styles/Login/AuthForm.css"
-import {NavLink} from 'react-router-dom'
+import {NavLink, useLocation} from 'react-router-dom'
 
 export default function AuthForms() {
   const [activeForm, setActiveForm] = useState("login");
+  const location = useLocation();
+  const message = location.state?.message;
+  const [showModal, setShowModal] = useState(false);
   const toggleForms = (formType) => setActiveForm(formType);
 
+ useEffect(() => {
+    if (message) {
+      // If there's a message (e.g., "Log Out Successful"), show the modal
+      setShowModal(true);
+
+      // Hide the modal after 2 seconds
+      setTimeout(() => {
+        setShowModal(false);
+      }, 2000);
+    }
+  }, [message]);
+
   return (
+    <div>
+      {message && showModal && (
+        <div className="modal show">{message} </div> )}
+
     <div className="LoginContainer">
   {/* Log in Form */}
         <div id="loginForm" className={`form-container ${activeForm === "login" ? "active" : "hidden"}`}>
@@ -51,6 +70,7 @@ export default function AuthForms() {
           </form>
         </div>
      
+    </div>
     </div>
   );
 }
