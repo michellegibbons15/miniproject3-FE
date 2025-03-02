@@ -1,29 +1,48 @@
-import React, {useState, useEffect} from 'react'
-import "../../Styles/Dashboard/Welcome.css"
-import soccerImg from "../../assets/dashboard/Profile.png"
-import { FontAwesomeIcon} from '@fortawesome/react-fontawesome'
-import { faBell} from '@fortawesome/free-solid-svg-icons'
-
-
+import React, { useState, useEffect } from "react";
+import "../../Styles/Dashboard/Welcome.css";
+import soccerImg from "../../assets/dashboard/Profile.png";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faBell } from "@fortawesome/free-solid-svg-icons";
 
 const Welcome = () => {
-  const [userName, setUserName] = useState('');
+  const [userName, setUserName] = useState("");
 
   useEffect(() => {
-    // Replace this with your actual login/authentication logic
-    const loggedInUser = "Michelle"; // You can get this value from context, API, or local storage
-    setUserName(loggedInUser);
+    // fetching to get the current user
+    const fetchUser = async () => {
+      try {
+        const response = await fetch("http://localhost:8081/api/users", {
+          method: "GET",
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem("token")}`, // Assuming token is stored in localStorage
+          },
+        });
+        if (!response.ok) {
+          throw new Error("Failed to fetch user");
+        }
+        const data = await response.json();
+        console.log("User data:", data);
+        setUserName(data.name || data.username); // Assuming the API returns a 'name' property
+      } catch (error) {
+        console.log("Error fetching user:", error);
+      }
+    };
+
+    fetchUser();
   }, []);
 
   return (
     <div className="Welcome">
-      <img src={soccerImg} alt="Michelle" className="profile"/>
-        <div className="welcome-bar">
-          <h1>Welcome back, {userName}!</h1>
-          <h4><FontAwesomeIcon icon={faBell} />Notifications</h4>
-        </div>
+      <img src={soccerImg} alt="Michelle" className="profile" />
+      <div className="welcome-bar">
+        <h1>Welcome back, {userName}!</h1>
+        <h4>
+          <FontAwesomeIcon icon={faBell} />
+          Notifications
+        </h4>
+      </div>
     </div>
-  )
-}
+  );
+};
 
-export default Welcome
+export default Welcome;
