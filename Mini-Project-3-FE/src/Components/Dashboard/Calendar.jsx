@@ -11,6 +11,8 @@ import {
 } from "date-fns";
 import "../../Styles/Dashboard/Calendar.css";
 
+const API_URL = "http://localhost:8081/api/events";
+
 const Calendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
@@ -19,73 +21,108 @@ const Calendar = () => {
   const [eventTime, setEventTime] = useState("");
   const [editingEvent, setEditingEvent] = useState(null);
 
+  // Fetch all events from the backend
   useEffect(() => {
-    const storedEvents = JSON.parse(localStorage.getItem("events")) || [];
-    setEvents(storedEvents);
+    fetch(API_URL)
+      .then((res) => res.json())
+      .then((data) => setEvents(data.data || []))
+      .catch((err) => console.error("Error fetching events:", err));
   }, []);
+  
+// helper function to reset form 
+const resetForm = () => {
+  setSelectedDate(null);
+  setEventText("");
+  setEventTime("");
+  setEditingEvent(null);
+};
 
-  useEffect(() => {
-    localStorage.setItem("events", JSON.stringify(events));
-  }, [events]);
-
-  const addOrEditEvent = () => {
-    if (!eventText.trim() || !eventTime.trim()) return;
-
-    // Ensure correct EST date formatting
-    const selectedDateEST = format(
-      new Date(
-        selectedDate.getFullYear(),
-        selectedDate.getMonth(),
-        selectedDate.getDate()
-      ),
-      "yyyy-MM-dd"
-    );
-
-    if (editingEvent) {
-      const updatedEvents = events.map((event) =>
-        event === editingEvent
-          ? { ...event, text: eventText, time: eventTime, date: selectedDateEST }
-          : event
-      );
-      setEvents(updatedEvents);
-      setEditingEvent(null);
-    } else {
-      const newEvent = {
-        date: selectedDateEST,
-        time: eventTime,
-        text: eventText,
-      };
-      setEvents([...events, newEvent]);
+// create an event
+  const createEvent = async () => {
+    if (!eventText.trim() || !eventTime.trim() || !selectedDate) return;
+  
+    const eventData = {
+      title:eventText,
+      date: format(selectedDate, "yyyy-MM-dd"),
+      time: eventTime,
+      userId: 1
+    };
+  
+    try {
+      const response = await fetch(`${API_URL}/create`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(eventData),
+      });
+  
+      if (response.ok) {
+        const newEvent = await response.json();
+        setEvents([...events, newEvent.data]); // Update event list
+        resetForm();
+      }
+    } catch (error) {
+      console.error("Error creating event:", error);
     }
-
-    setSelectedDate(null);
-    setEventText("");
-    setEventTime("");
+  };
+  
+  //edit an event
+  const editEvent = async () => {
+    if (!eventText.trim() || !eventTime.trim() || !editingEvent) return;
+  
+    const updatedEvent = {
+      title: eventText,
+      date: format(selectedDate, "yyyy-MM-dd"),
+      time: eventTime,
+      userId: 1,
+    };
+  
+    try {
+      const response = await fetch(`${API_URL}/${editingEvent.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedEvent),
+      });
+  
+      if (response.ok) {
+        setEvents(events.map(event =>
+          event.id === editingEvent.id ? { ...event, ...updatedEvent } : event
+        ));
+        resetForm();
+      }
+    } catch (error) {
+      console.error("Error updating event:", error);
+    }
+  };
+// delete an event
+  const deleteEvent = async (eventId) => {
+    try {
+      const response = await fetch(`${API_URL}/${eventId}`, {
+        method: "DELETE",
+      });
+  
+      if (response.ok) {
+        setEvents(events.filter(event => event.id !== eventId)); // Remove from list
+      }
+    } catch (error) {
+      console.error("Error deleting event:", error);
+    }
   };
 
+  // Start editing event
   const startEditing = (event) => {
     setEditingEvent(event);
-    setEventText(event.text);
+    setSelectedDate(parseISO(event.date));
+    setEventText(event.title);
     setEventTime(event.time);
-    setSelectedDate(parseISO(event.date)); // Parse stored date properly
   };
 
-  const cancelEditing = () => {
-    setEditingEvent(null);
-    setEventText("");
-    setEventTime("");
-    setSelectedDate(null);
-  };
-
-  const deleteEvent = (eventToDelete) => {
-    const updatedEvents = events.filter((event) => event !== eventToDelete);
-    setEvents(updatedEvents);
-  };
-
-  // Get current date in EST
-  const nowEST = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
+  // Current date in EST
+  const nowEST = new Date().toLocaleString("en-US", {
+    timeZone: "America/New_York",
+  });
   const nowESTDate = new Date(nowEST);
 
+  // Separate past and upcoming events
   const upcomingEvents = events.filter((event) =>
     isBefore(nowESTDate, parseISO(event.date))
   );
@@ -112,7 +149,15 @@ const Calendar = () => {
           Next →
         </button>
         <div className="calendar-days-header">
-          {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((day) => (
+          {[
+            "Sunday",
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+          ].map((day) => (
             <div key={day} className="calendar-day-name">
               {day}
             </div>
@@ -136,7 +181,10 @@ const Calendar = () => {
         {/* Event Form */}
         {selectedDate && (
           <div className="event-form">
-            <h4>{editingEvent ? `Edit Event` : `Add Event`} for {format(selectedDate, "PPP")}</h4>
+            <h4>
+              {editingEvent ? `Edit Event` : `Add Event`} for
+              {format(selectedDate, "PPP")}
+            </h4>
             <input
               type="text"
               value={eventText}
@@ -148,8 +196,10 @@ const Calendar = () => {
               value={eventTime}
               onChange={(e) => setEventTime(e.target.value)}
             />
-            <button onClick={addOrEditEvent}>{editingEvent ? "Update" : "Add"}</button>
-            <button onClick={cancelEditing}>Cancel</button>
+            <button onClick={editingEvent ? editEvent : createEvent}>
+              {editingEvent ? "Update" : "Add"}
+            </button>
+            <button onClick={resetForm}>Cancel</button>
           </div>
         )}
       </div>
@@ -160,11 +210,12 @@ const Calendar = () => {
         {upcomingEvents.length === 0 ? (
           <p>No upcoming events</p>
         ) : (
-          upcomingEvents.map((event, index) => (
-            <div key={index} className="event-item">
-              <strong>{format(parseISO(event.date), "PPP")}</strong>: {event.text} at {event.time}
+          upcomingEvents.map((event) => (
+            <div key={event.id} className="event-item">
+              <strong>{format(parseISO(event.date), "PPP")}</strong>:{" "}
+              {event.text} at {event.time}
               <button onClick={() => startEditing(event)}>Edit</button>
-              <button onClick={() => deleteEvent(event)}>Delete</button>
+              <button onClick={() => deleteEvent(event.id)}>Delete</button>
             </div>
           ))
         )}
@@ -175,9 +226,10 @@ const Calendar = () => {
         ) : (
           pastEvents.map((event, index) => (
             <div key={index} className="event-item">
-              <strong>{format(parseISO(event.date), "PPP")}</strong>: {event.text} at {event.time}
+              <strong>{format(parseISO(event.date), "PPP")}</strong>:{" "}
+              {event.text} at {event.time}
               <button onClick={() => startEditing(event)}>Edit</button>
-              <button onClick={() => deleteEvent(event)}>Delete</button>
+              <button onClick={() => deleteEvent(event.id)}>Delete</button>
             </div>
           ))
         )}
