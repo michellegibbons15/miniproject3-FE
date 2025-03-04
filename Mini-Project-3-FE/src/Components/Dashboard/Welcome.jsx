@@ -21,8 +21,12 @@ const Welcome = () => {
           throw new Error("Failed to fetch user");
         }
         const data = await response.json();
-        console.log("User data:", data);
-        setUserName(data.name || data.username); // Assuming the API returns a 'name' property
+        console.log("API Response:", data);
+        if (data && data.length > 0){
+          setUserName(data[0].name);
+        }else {
+        setUserName( "Guest"); 
+        }
       } catch (error) {
         console.log("Error fetching user:", error);
       }
@@ -35,7 +39,7 @@ const Welcome = () => {
     <div className="Welcome">
       <img src={soccerImg} alt="Michelle" className="profile" />
       <div className="welcome-bar">
-        <h1>Welcome back, {userName}!</h1>
+        <h1>Welcome back!</h1>
         <h4>
           <FontAwesomeIcon icon={faBell} />
           Notifications
